@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <title>4 bit palette</title>
+    <style>
+        :root {
+            --bg-color: #f0f2f5;
+            --card-bg: #ffffff;
+            --primary: #4a90e2;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background-color: var(--bg-color);
+            margin: 0;
+            display: flex;
+            height: 100vh;
+            overflow: hidden;
+        }
+
+        .sidebar {
+            width: 320px;
+            background: #fff;
+            border-right: 1px solid #ddd;
+            padding: 25px;
+            display: flex;
+            flex-direction: column;
+            box-shadow: 2px 0 10px rgba(0,0,0,0.05);
+            overflow-y: auto;
+        }
+
+        .main-content {
+            flex-grow: 1;
+            padding: 40px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        h2 { margin-top: 0; font-size: 1.1rem; color: #333; }
+        .control-group { margin-bottom: 25px; }
+        label { display: block; font-size: 0.85rem; color: #555; margin-bottom: 8px; font-weight: 600; }
+
+        input[type="color"] {
+            width: 100%;
+            height: 45px;
+            border: 2px solid #eee;
+            border-radius: 8px;
+            cursor: pointer;
+            background: #fff;
+        }
+
+        input[type="range"] {
+            width: 100%;
+            margin-top: 5px;
+        }
+
+        .palette {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 20px;
+            width: 100%;
+            max-width: 800px;
+        }
+
+        @media (min-width: 1100px) {
+            .palette { grid-template-columns: repeat(4, 1fr); }
+        }
+
+        .card {
+            background: var(--card-bg);
+            padding: 15px;
+            border-radius: 16px;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.06);
+            text-align: center;
+            transition: transform 0.3s ease;
+        }
+
+        .card:hover { transform: translateY(-3px); }
+
+        .swatch {
+            height: 140px;
+            border-radius: 10px;
+            margin-bottom: 12px;
+            border: 1px solid rgba(0,0,0,0.04);
+            cursor: pointer;
+        }
+
+        .label { font-size: 0.65rem; font-weight: bold; color: #aaa; text-transform: uppercase; display: block; margin-bottom: 5px; }
+        .hex-val { font-size: 1rem; font-weight: bold; display: block; color: #222; margin-bottom: 2px; }
+        .rgb-val { font-size: 0.75rem; color: #888; font-family: 'Courier New', monospace; display: block; margin-bottom: 15px; }
+
+        .copy-btn {
+            width: 100%;
+            background: #f1f3f5;
+            color: #444;
+            border: 1px solid #ddd;
+            padding: 7px;
+            border-radius: 6px;
+            cursor: pointer;
+            font-size: 0.7rem;
+            font-weight: 600;
+            transition: all 0.2s;
+        }
+
+        .copy-btn:hover { background: #e9ecef; border-color: #ccc; }
+
+        .random-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 8px;
+            cursor: pointer;
+            margin-bottom: 20px;
+            font-weight: bold;
+        }
+
+        .toast {
+            position: fixed;
+            bottom: 20px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: #333;
+            color: white;
+            padding: 10px 25px;
+            border-radius: 20px;
+            display: none;
+            font-size: 0.9rem;
+            z-index: 100;
+        }
+    </style>
+</head>
+<body>
+
+<div class="sidebar">
+    <h2>Настройки палитры</h2>
+    
+    <div class="control-group">
+        <label>Базовый цвет</label>
+        <input type="color" id="picker" value="#4a90e2">
+    </div>
+
+    <div class="control-group">
+        <label>Насыщенность: <span id="sat-val">100</span>%</label>
+        <input type="range" id="saturation" min="0" max="200" value="100">
+    </div>
+
+    <div class="control-group">
+        <label>Доп. яркость: <span id="light-val">0</span>%</label>
+        <input type="range" id="lightness" min="-50" max="50" value="0">
+    </div>
+
+    <button class="random-btn" onclick="randomColor()">Случайный цвет</button>
+
+    <div style="margin-top: auto; font-size: 0.7rem; color: #999; line-height: 1.5;">
+        Логика: Каналы смещаются к 144 и 72. <br>
+        Модификаторы HSL накладываются поверх RGB расчёта.
+    </div>
+</div>
+
+<div class="main-content">
+    <div class="palette">
+        <!-- Карточки цветов динамически обновляются через JS -->
+        <div class="card">
+            <span class="label">Белый (1)</span>
+            <div class="swatch" id="s1" onclick="copy('h1')"></div>
+            <span class="hex-val" id="h1">#FFFFFF</span>
+            <span class="rgb-val" id="r1">255, 255, 255</span>
+            <button class="copy-btn" onclick="copy('h1')">Копировать</button>
+        </div>
+        <div class="card">
+            <span class="label">Светлый (2)</span>
+            <div class="swatch" id="s2" onclick="copy('h2')"></div>
+            <span class="hex-val" id="h2">#000000</span>
+            <span class="rgb-val" id="r2">0, 0, 0</span>
+            <button class="copy-btn" onclick="copy('h2')">Копировать</button>
+        </div>
+        <div class="card">
+            <span class="label">Тёмный (3)</span>
+            <div class="swatch" id="s3" onclick="copy('h3')"></div>
+            <span class="hex-val" id="h3">#000000</span>
+            <span class="rgb-val" id="r3">0, 0, 0</span>
+            <button class="copy-btn" onclick="copy('h3')">Копировать</button>
+        </div>
+        <div class="card">
+            <span class="label">Чёрный (4)</span>
+            <div class="swatch" id="s4" onclick="copy('h4')"></div>
+            <span class="hex-val" id="h4">#000000</span>
+            <span class="rgb-val" id="r4">0, 0, 0</span>
+            <button class="copy-btn" onclick="copy('h4')">Копировать</button>
+        </div>
+    </div>
+</div>
+
+<div id="toast" class="toast">Цвет скопирован!</div>
+
+<script>
+    const picker = document.getElementById('picker');
+    const satSlider = document.getElementById('saturation');
+    const lightSlider = document.getElementById('lightness');
+    const toast = document.getElementById('toast');
+
+    // Конвертация RGB в HSL для модификаций
+    function rgbToHsl(r, g, b) {
+        r /= 255, g /= 255, b /= 255;
+        let max = Math.max(r, g, b), min = Math.min(r, g, b);
+        let h, s, l = (max + min) / 2;
+
+        if (max === min) {
+            h = s = 0;
+        } else {
+            let d = max - min;
+            s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
+            switch (max) {
+                case r: h = (g - b) / d + (g < b ? 6 : 0); break;
+                case g: h = (b - r) / d + 2; break;
+                case b: h = (r - g) / d + 4; break;
+            }
+            h /= 6;
+        }
+        return { h: h * 360, s: s * 100, l: l * 100 };
+    }
+
+    function hslToRgb(h, s, l) {
+        s /= 100; l /= 100; h /= 360;
+        let r, g, b;
+        if (s === 0) {
+            r = g = b = l;
+        } else {
+            const hue2rgb = (p, q, t) => {
+                if (t < 0) t += 1;
+                if (t > 1) t -= 1;
+                if (t < 1/6) return p + (q - p) * 6 * t;
+                if (t < 1/2) return q;
+                if (t < 2/3) return p + (q - p) * (2/3 - t) * 6;
+                return p;
+            };
+            let q = l < 0.5 ? l * (1 + s) : l + s - l * s;
+            let p = 2 * l - q;
+            r = hue2rgb(p, q, h + 1/3);
+            g = hue2rgb(p, q, h);
+            b = hue2rgb(p, q, h - 1/3);
+        }
+        return { r: Math.round(r * 255), g: Math.round(g * 255), b: Math.round(b * 255) };
+    }
+
+    function applyHslMods(r, g, b) {
+        let hsl = rgbToHsl(r, g, b);
+        // Модификация насыщенности
+        hsl.s = Math.min(100, Math.max(0, hsl.s * (satSlider.value / 100)));
+        // Модификация яркости
+        hsl.l = Math.min(100, Math.max(0, hsl.l + parseInt(lightSlider.value)));
+        return hslToRgb(hsl.h, hsl.s, hsl.l);
+    }
+
+    function hexToRgb(hex) {
+        const r = parseInt(hex.slice(1, 3), 16);
+        const g = parseInt(hex.slice(3, 5), 16);
+        const b = parseInt(hex.slice(5, 7), 16);
+        return { r, g, b };
+    }
+
+    function toHex(n) {
+        const hex = Math.max(0, Math.min(255, n)).toString(16).toUpperCase();
+        return hex.length === 1 ? '0' + hex : hex;
+    }
+
+    function update() {
+        document.getElementById('sat-val').innerText = satSlider.value;
+        document.getElementById('light-val').innerText = lightSlider.value;
+
+        const base = hexToRgb(picker.value);
+
+        // 1. Сначала считаем RGB по вашей формуле 1.33x
+        let rawColors = [
+            { r: 255, g: 255, b: 255 }, 
+            {
+                r: Math.round(144 + (base.r * 48 / 255)),
+                g: Math.round(144 + (base.g * 48 / 255)),
+                b: Math.round(144 + (base.b * 48 / 255))
+            },
+            {
+                r: Math.round(72 + (base.r * 24 / 255)),
+                g: Math.round(72 + (base.g * 24 / 255)),
+                b: Math.round(72 + (base.b * 24 / 255))
+            },
+            { r: 0, g: 0, b: 0 }
+        ];
+
+        // 2. Применяем HSL модификаторы ко всем, кроме чисто черного и белого
+        const finalColors = rawColors.map((c, i) => {
+            if (i === 0 || i === 3) return c; 
+            return applyHslMods(c.r, c.g, c.b);
+        });
+
+        // 3. Рендерим
+        finalColors.forEach((c, i) => {
+            const idx = i + 1;
+            const hexText = `#${toHex(c.r)}${toHex(c.g)}${toHex(c.b)}`;
+            document.getElementById(`s${idx}`).style.backgroundColor = hexText;
+            document.getElementById(`h${idx}`).innerText = hexText;
+            document.getElementById(`r${idx}`).innerText = `${c.r}, ${c.g}, ${c.b}`;
+        });
+    }
+
+    function copy(id) {
+        const text = document.getElementById(id).innerText;
+        navigator.clipboard.writeText(text);
+        toast.style.display = 'block';
+        setTimeout(() => { toast.style.display = 'none'; }, 1500);
+    }
+
+    function randomColor() {
+        const randomHex = '#' + Math.floor(Math.random()*16777215).toString(16).padStart(6, '0');
+        picker.value = randomHex;
+        update();
+    }
+
+    [picker, satSlider, lightSlider].forEach(el => el.addEventListener('input', update));
+    update();
+</script>
+
+</body>
+</html>
